@@ -35,6 +35,7 @@ import org.springframework.web.client.RestTemplate;
  * 
  * @author Ryan Heaton
  * @author Dave Syer
+ * @author Michael Pratt
  */
 public class OAuth2RestTemplate extends RestTemplate implements OAuth2RestOperations {
 
@@ -47,6 +48,8 @@ public class OAuth2RestTemplate extends RestTemplate implements OAuth2RestOperat
 	private OAuth2ClientContext context;
 
 	private boolean retryBadAccessTokens = true;
+
+	private int tokenExpiryPad = 0;
 
 	private OAuth2RequestAuthenticator authenticator = new DefaultOAuth2RequestAuthenticator();
 
@@ -84,6 +87,19 @@ public class OAuth2RestTemplate extends RestTemplate implements OAuth2RestOperat
 	 */
 	public void setRetryBadAccessTokens(boolean retryBadAccessTokens) {
 		this.retryBadAccessTokens = retryBadAccessTokens;
+	}
+
+	/**
+	 * Padding to use when checking token expiration. This allows some grace period for token expiration when remote
+	 * systems may not have the same network time.
+	 *
+	 * @param tokenExpiryPad padding to use when checking if a token is expired (default is 0, or no padding)
+	 */
+	public void setTokenExpiryPad(int tokenExpiryPad) {
+		if(tokenExpiryPad < 0) {
+			tokenExpiryPad = 0;
+		}
+		this.tokenExpiryPad = tokenExpiryPad;
 	}
 
 	@Override
@@ -168,7 +184,7 @@ public class OAuth2RestTemplate extends RestTemplate implements OAuth2RestOperat
 
 		OAuth2AccessToken accessToken = context.getAccessToken();
 
-		if (accessToken == null || accessToken.isExpired()) {
+		if (accessToken == null || accessToken.getExpiresIn() <= tokenExpiryPad) {
 			try {
 				accessToken = acquireAccessToken(context);
 			}

@@ -38,6 +38,7 @@ import org.springframework.web.util.UriTemplate;
 /**
  * @author Ryan Heaton
  * @author Dave Syer
+ * @author Michael Pratt
  */
 public class OAuth2RestTemplateTests {
 
@@ -198,6 +199,30 @@ public class OAuth2RestTemplateTests {
 		OAuth2AccessToken newToken = restTemplate.getAccessToken();
 		assertNotNull(newToken);
 		assertTrue(!token.equals(newToken));
+	}
+
+	@Test
+	public void testNewTokenAcquiredIfExpiryLessThanPadding() throws Exception {
+		DefaultOAuth2AccessToken token = new DefaultOAuth2AccessToken("TEST");
+		token.setExpiration(new Date(System.currentTimeMillis() + 1500));
+		restTemplate.setTokenExpiryPad(1); // 1 sec
+		restTemplate.getOAuth2ClientContext().setAccessToken(token);
+		restTemplate.setAccessTokenProvider(new StubAccessTokenProvider());
+		OAuth2AccessToken newToken = restTemplate.getAccessToken();
+		assertNotNull(newToken);
+		assertTrue(!token.equals(newToken));
+	}
+
+	@Test
+	public void testNoNewTokenAcquiredIfExpiryGreaterThanPadding() throws Exception {
+		DefaultOAuth2AccessToken token = new DefaultOAuth2AccessToken("TEST");
+		token.setExpiration(new Date(System.currentTimeMillis() + 5000));
+		restTemplate.setTokenExpiryPad(1); // 1 sec
+		restTemplate.getOAuth2ClientContext().setAccessToken(token);
+		restTemplate.setAccessTokenProvider(new StubAccessTokenProvider());
+		OAuth2AccessToken newToken = restTemplate.getAccessToken();
+		assertNotNull(newToken);
+		assertTrue(token.equals(newToken));
 	}
 
 	@Test
